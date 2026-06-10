@@ -7,7 +7,7 @@ from models.reparacion import Reparacion
 
 
 class RepositorioDatos:
-    """Construtor de la clase RepositorioDatos que 
+    """Construtor de la clase RepositorioDatos que
     se encarga de realizar la conexion a la base de datos"""
 
     def __init__(self,):
@@ -34,8 +34,8 @@ class RepositorioDatos:
 
         # Generamos la consulta SQL para insertar un nuevo cliente en la tabla "clientes".
         query = """INSERT INTO clientes(
-                nombre, apellido, documento, telefono, correo) 
-                VALUES 
+                nombre, apellido, documento, telefono, correo)
+                VALUES
                 (%s,%s,%s,%s,%s)"""
 
         valores = (cliente.nombre, cliente.apellido,
@@ -127,8 +127,8 @@ class RepositorioDatos:
                 c.id_cliente, c.nombre AS nombre_cliente,
                 c.apellido AS apellido_cliente, c.documento,
                 c.telefono, c.correo
-                FROM dispositivos d 
-                INNER JOIN clientes c 
+                FROM dispositivos d
+                INNER JOIN clientes c
                 ON d.cliente_id = c.id_cliente"""
 
         ejecutar.execute(query)
@@ -167,8 +167,8 @@ class RepositorioDatos:
         query = """SELECT d.imei, d.marca, d.modelo, d.cliente_id,
                 c.nombre AS nombre_cliente, c.apellido AS apellido_cliente,
                 c.documento, c.telefono, c.correo
-                FROM dispositivos d 
-                INNER JOIN clientes c 
+                FROM dispositivos d
+                INNER JOIN clientes c
                 ON d.cliente_id = c.id_cliente WHERE d.imei = %s"""
 
         ejecutar.execute(query, (imei,))
@@ -201,7 +201,7 @@ class RepositorioDatos:
         ejecutar = conexion.cursor()
 
         query = """INSERT INTO tecnicos
-                (nombre, apellido, documento, telefono, turno) 
+                (nombre, apellido, documento, telefono, turno)
                 VALUES (%s,%s,%s,%s,%s)"""
 
         valores = (tecnico.nombre, tecnico.apellido,
@@ -272,13 +272,13 @@ class RepositorioDatos:
         ejecutar = conexion.cursor(dictionary=True)
 
         query = """SELECT r.id_reparacion, r.falla, r.estado,
-                r.fecha_ingreso, r.notas, d.imei, d.marca, 
-                d.modelo, c.documento, c.telefono, c.correo, 
-                c.nombre AS nombre_cliente, c.apellido AS apellido_cliente 
-                FROM reparaciones r 
-                INNER JOIN dispositivos d 
-                ON r.dispositivo_imei = d.imei 
-                INNER JOIN clientes c 
+                r.fecha_ingreso, r.notas, d.imei, d.marca,
+                d.modelo, c.documento, c.telefono, c.correo,
+                c.nombre AS nombre_cliente, c.apellido AS apellido_cliente
+                FROM reparaciones r
+                INNER JOIN dispositivos d
+                ON r.dispositivo_imei = d.imei
+                INNER JOIN clientes c
                 ON d.cliente_id = c.id_cliente"""
 
         ejecutar.execute(query)
@@ -339,15 +339,15 @@ class RepositorioDatos:
         ejecutar = conexion.cursor(dictionary=True)
 
         query = """SELECT r.id_reparacion, r.falla, r.estado,
-                r.notas, r.fecha_ingreso, d.imei, d.marca, 
-                d.modelo, t.id_tecnico, t.nombre AS nombre_tecnico, 
-                t.apellido AS apellido_tecnico, 
-                t.documento AS documento_tecnico, t.telefono, t.turno 
-                FROM reparaciones r 
-                INNER JOIN dispositivos d 
-                ON r.dispositivo_imei = d.imei 
-                INNER JOIN tecnicos t 
-                ON r.tecnico_id = t.id_tecnico 
+                r.notas, r.fecha_ingreso, d.imei, d.marca,
+                d.modelo, t.id_tecnico, t.nombre AS nombre_tecnico,
+                t.apellido AS apellido_tecnico,
+                t.documento AS documento_tecnico, t.telefono, t.turno
+                FROM reparaciones r
+                INNER JOIN dispositivos d
+                ON r.dispositivo_imei = d.imei
+                INNER JOIN tecnicos t
+                ON r.tecnico_id = t.id_tecnico
                 WHERE r.id_reparacion = %s"""
 
         ejecutar.execute(query, (id_reparacion,))
