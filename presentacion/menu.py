@@ -12,7 +12,7 @@ class InterfazSimple:
         self.datos = repositorio
 
     def iniciar(self):
-        """Metodo para iniciar la interfaz, 
+        """Metodo para iniciar la interfaz,
         muestra el menu principal y espera la opcion del usuario"""
 
         if not self.datos.obtener_tecnicos():
@@ -33,7 +33,7 @@ class InterfazSimple:
             print("7. Salir")
             print("="*40)
 
-            opcion = input("Seleccione una opcion (1-7): ")
+            opcion = input("Seleccione una opcion (1-7): ").strip()
 
             if opcion == "1":
                 self._registrar_cliente_y_dispositivo()
@@ -60,6 +60,10 @@ class InterfazSimple:
         apellido = input("Ingrese el apellido del cliente: ")
         dni = input("Ingrese el DNI del cliente: ")
 
+        while not dni or not dni.isdigit():
+            print("DNI invalido. Asegurese de ingresar un numero de DNI valido.")
+            dni = input("Ingrese el DNI del cliente: ")
+
         telefono = input("Ingrese el telefono del cliente: ")
         # Validamos que el telefono tenga al menos 10 digitos y solo contenga numeros
         while not telefono or not telefono.isdigit() or len(telefono) < 10:
@@ -76,7 +80,7 @@ class InterfazSimple:
             correo = input("Ingrese el email del cliente: ").strip()
 
         nuevo_cliente = Cliente(
-            0, nombre, apellido, dni, telefono, correo)
+            None, nombre, apellido, dni, telefono, correo)
 
         print("\n--- PASO 2: REGISTRO DEL DISPOSITIVO ---")
 
@@ -84,7 +88,7 @@ class InterfazSimple:
         # Validamos que el IMEI tenga exactamente 15 digitos y solo contenga numeros
         while not imei or not imei.isdigit() or len(imei) != 15:
             print(
-                """IMEI invalido. Asegurese de ingresar 
+                """IMEI invalido. Asegurese de ingresar
                 un numero de IMEI valido (exactamente 15 digitos).""")
             imei = input("Numero de IMEI (15 digitos): ")
 
@@ -96,19 +100,47 @@ class InterfazSimple:
 
         while True:
             marca = input(
-                f"Marca ({', '.join(marcas_validas)}): ").strip().capitalize()
+                f"Marca ({', '.join(marcas_validas)}): ").strip()
+            if marca.upper() in ["LG", "TCL"]:
+                marca = marca.upper()
+            else:
+                marca = marca.capitalize()
+
             if marca in marcas_validas:
                 break
             print("Marca inválida. Intente nuevamente.")
 
-        modelo = input("Modelo: ")
+        modelo = input("Modelo: ").strip()
 
-        nuevo_dispositivo = Dispositivo(imei, marca, modelo, nuevo_cliente)
+        print("\n Validando datos ingresados...")
+        try:
+            nuevo_cliente = Cliente(
+                None, nombre, apellido, dni, telefono, correo)
+            nuevo_dispositivo = Dispositivo(imei, marca, modelo, nuevo_cliente)
+        except ValueError as exc:
+            print(f"Error al crear cliente o dispositivo: {exc}")
+            print("Registro cancelado. Intente nuevamente.")
+            return
 
-        self.datos.guardar_cliente(nuevo_cliente)
-        self.datos.guardar_dispositivo(nuevo_dispositivo)
+        print("\n Datos válidos. Registrando...")
 
-        print("\nCliente y Dispositivo registrados exitosamente!")
+        id_cliente_creado = self.datos.guardar_cliente(nuevo_cliente)
+
+        if id_cliente_creado:
+            nuevo_cliente.id_cliente = id_cliente_creado
+            if self.datos.guardar_dispositivo(nuevo_dispositivo):
+                print("\nCliente y dispositivo registrado exitosamente!")
+            else:
+                print("\nError al registrar el dispositivo. Intente nuevamente.")
+                print(
+                    "El cliente registrado se eliminará para mantener la consistencia de los datos.")
+                self.datos.eliminar_dispositivo_por_cliente(
+                    nuevo_cliente.id_cliente)
+                self.datos.eliminar_cliente(id_cliente_creado)
+
+                print("Registro cancelado. Intente nuevamente.")
+        else:
+            print("\nError al registrar el cliente. Intente nuevamente.")
 
     def _modificar_datos_cliente(self):
         print("\n--- MODIFICAR DATOS DE CLIENTE ---")
@@ -120,28 +152,43 @@ class InterfazSimple:
         for i, cliente in enumerate(clientes):
             print(
                 f"{i}) {cliente.nombre} {cliente.apellido} | DNI: {cliente.documento}")
+
+        try:
             id_cliente = int(input("Ingrese el numero del cliente: "))
-            cliente_seleccionado = clientes[id_cliente]
-            print("\n Ingrese la opcion que desea modificar: ")
-            print("1. Telefono")
-            print("2. Correo Electronico")
-            opcion_modificar = input("Seleccione una opcion (1-2): ")
-            if opcion_modificar == "1":
-                nuevo_telefono = input("Ingrese el nuevo telefono: ")
-                cliente_seleccionado.actualizar_datos(
-                    nuevo_telefono=nuevo_telefono)
+            if id_cliente < 0 or id_cliente >= len(clientes):
+                print("\n Numero de cliente invalido. Intente nuevamente.")
+                return
+        except ValueError:
+            print("\n Entrada invalida. Por favor, ingrese un numero valido.")
+            return
 
-                self.datos.actualizar_cliente(cliente_seleccionado)
+        cliente_seleccionado = clientes[id_cliente]
+        print("\n Ingrese la opcion que desea modificar: ")
+        print("1. Telefono")
+        print("2. Correo Electronico")
+        opcion_modificar = input("Seleccione una opcion (1-2): ")
+        if opcion_modificar == "1":
+            nuevo_telefono = input("Ingrese el nuevo telefono: ")
+            if cliente_seleccionado.actualizar_datos(
+                    nuevo_telefono=nuevo_telefono):
+                if self.datos.actualizar_cliente(cliente_seleccionado):
+                    print("\nTelefono actualizado exitosamente!")
+                else:
+                    print("\nError al actualizar el telefono en la base de datos.")
+            else:
+                print("\nTelefono invalido. Intente nuevamente.")
 
-                print("\nTelefono actualizado exitosamente!")
-
-            elif opcion_modificar == "2":
-                nuevo_correo = input("Ingrese el nuevo correo electronico: ")
-                cliente_seleccionado.actualizar_datos(
-                    nuevo_correo=nuevo_correo)
-                self.datos.actualizar_cliente(cliente_seleccionado)
-
-                print("\nCorreo electronico actualizado exitosamente!")
+        elif opcion_modificar == "2":
+            nuevo_correo = input("Ingrese el nuevo correo electronico: ")
+            if cliente_seleccionado.actualizar_datos(
+                    nuevo_correo=nuevo_correo):
+                if self.datos.actualizar_cliente(cliente_seleccionado):
+                    print("\nCorreo electronico actualizado exitosamente!")
+                else:
+                    print(
+                        "\nError al actualizar el correo electronico en la base de datos.")
+            else:
+                print("\nCorreo electronico invalido. Intente nuevamente.")
 
     def _crear_orden(self):
         print("\n--- CREAR ORDEN DE REPARACIÓN ---")
@@ -158,17 +205,38 @@ class InterfazSimple:
                   Cliente: {dispositivo.cliente.nombre}
                   {dispositivo.cliente.apellido}""")
 
-        id_dispositivo = int(input("Ingrese el numero del dispositivo: "))
-        falla_reportada = input("Describa la falla reportada: ")
-        tecnico_asignado = self.datos.obtener_tecnicos()[0]
+        try:
+            id_dispositivo = int(input("Ingrese el numero del dispositivo: "))
+            if id_dispositivo < 0 or id_dispositivo >= len(dispositivos):
+                print("\n Seleccion de dispositivo invalida. Intente nuevamente.")
+                return
+        except ValueError:
+            print("\n Entrada invalida. Por favor, ingrese un numero valido.")
+            return
+        falla_reportada = input("Describa la falla reportada: ").strip()
+        if not falla_reportada:
+            print(
+                "\n La descripcion de la falla no puede estar vacia. Intente nuevamente.")
+            return
+
+        tecnico = self.datos.obtener_tecnicos()
+        if not tecnico:
+            print("\n No hay tecnicos disponibles. Intente mas tarde.")
+            return
+        tecnico_asignado = tecnico[0]
 
         # Se instancia Reparacion sin el tecnico (el modelo no lo recibe ahí)
         nueva_orden = Reparacion(
-            0, dispositivos[id_dispositivo], tecnico_asignado, falla_reportada)
+            None, dispositivos[id_dispositivo], tecnico_asignado, falla_reportada)
         tecnico_asignado.agregar_reparacion(nueva_orden)
 
-        self.datos.guardar_reparacion(nueva_orden)
-        print(f"\n Orden #{nueva_orden.id} creada exitosamente!")
+        id_orden_creada = self.datos.guardar_reparacion(nueva_orden)
+        if id_orden_creada:
+            nueva_orden.id = id_orden_creada
+            tecnico_asignado.agregar_reparacion(nueva_orden)
+            print(f"\n Orden #{nueva_orden.id} creada exitosamente!")
+        else:
+            print("\n Error al crear la orden de reparacion. Intente nuevamente.")
 
     def _modificar_estado(self):
         # Traemos las reparaciones
@@ -181,12 +249,17 @@ class InterfazSimple:
         # Listamos las ordenes existentes en la BD
         for i, orden in enumerate(ordenes):
             print(
-                f"""[{i}] Orden #{orden.id} |
+                f""" Orden N°: {orden.id} |
                 Dispositivo: {orden.dispositivo.modelo} |
                 Estado: {orden.estado}""")
 
-        # Pedimos al usuario que ingrese la orden de reaparacion que desea modificar.
-        id_buscar = int(input("\nIngrese el ID de la orden a modificar: "))
+        try:
+
+            # Pedimos al usuario que ingrese la orden de reaparacion que desea modificar.
+            id_buscar = int(input("\nIngrese el ID de la orden a modificar: "))
+        except ValueError:
+            print("\n Entrada invalida. Por favor, ingrese un numero valido.")
+            return
 
         orden_encontrada = self.datos.buscar_reparacion_por_id(id_buscar)
 
@@ -204,35 +277,37 @@ class InterfazSimple:
             print("[4] LISTO")
             print("[5] ENTREGADO")
             print("[6] CANCELADO")
+            opcion_elegida = input(
+                "Ingrese el numero del nuevo estado: ").strip()
 
-            opcion_elegida = input("Ingrese el numero del nuevo estado: ")
+            estados = {
+                "1": "INGRESADO",
+                "2": "EN DIAGNOSTICO",
+                "3": "EN REPARACION",
+                "4": "LISTO",
+                "5": "ENTREGADO",
+                "6": "CANCELADO"
+            }
 
             # Asignamos el valor correspondiente elegido a la opcion correcta
 
-            if opcion_elegida == "1":
-                nuevo_estado = "INGRESADO"
-            elif opcion_elegida == "2":
-                nuevo_estado = "EN DIAGNOSTICO"
-            elif opcion_elegida == "3":
-                nuevo_estado = "EN REPARACION"
-            elif opcion_elegida == "4":
-                nuevo_estado = "LISTO"
-            elif opcion_elegida == "5":
-                nuevo_estado = "ENTREGADO"
-            elif opcion_elegida == "6":
-                nuevo_estado = "CANCELADO"
+            if opcion_elegida in estados:
+                nuevo_estado = estados[opcion_elegida]
+                if orden_encontrada.cambiar_estado(nuevo_estado):
+                    if self.datos.actualizar_reparacion(orden_encontrada):
+
+                        print(
+                            f"\nEstado actualizado exitosamente a {nuevo_estado} en el sistema.")
+                    else:
+                        print("\nError al actualizar el estado en la base de datos.")
+
+                else:
+                    print("\nEstado invalido. Intente nuevamente.")
+
             else:
-                print("\nOpcion Invalida. Intente nuevamente.")
-                return
-
-            orden_encontrada.estado = nuevo_estado
-
-            self.datos.actualizar_reparacion(orden_encontrada)
-            print(
-                f"\nEstado actualizado con exito a {nuevo_estado} en la base de datos")
-
+                print("\nOpcion invalida. Intente nuevamente.")
         else:
-            print("\n No se encontro ninguna orden con ese ID.")
+            print("\nNo se encontró la orden con el ID proporcionado.")
 
     def _agregar_nota(self):
         # Traemos las reparaciones
@@ -247,7 +322,7 @@ class InterfazSimple:
         # Listar las ordenes de reparacion registradas en el sistema
         for orden in ordenes:
             print(
-                f"""\Orden N°: {orden.id} |
+                f"""\nOrden N°: {orden.id} |
                 Equipo: {orden.dispositivo.marca} {orden.dispositivo.modelo} |
                 Estado: {orden.estado}""")
             print(
@@ -255,18 +330,24 @@ class InterfazSimple:
                 {orden.dispositivo.cliente.apellido} |
                 Falla: {orden.falla}""")
             print("="*40)
-
-        id_buscar = int(input("\nIngrese el ID de la orden a agregar nota: "))
+        try:
+            id_buscar = int(
+                input("\nIngrese el ID de la orden a agregar nota: "))
+        except ValueError:
+            print("\n Entrada invalida. Por favor, ingrese un numero valido.")
+            return
 
         orden_encontrada = self.datos.buscar_reparacion_por_id(id_buscar)
 
         if orden_encontrada:
-            nota = input("Escriba los detalles tecnicos: ")
-            orden_encontrada.agregar_nota_tecnico(nota)
-
-            self.datos.actualizar_reparacion(orden_encontrada)
-
-            print("\nNota agregada con exito al sistema")
+            nota = input("Escriba los detalles tecnicos: ").strip()
+            if orden_encontrada.agregar_nota_tecnico(nota):
+                if self.datos.actualizar_reparacion(orden_encontrada):
+                    print("\nNota agregada con exito al sistema")
+                else:
+                    print("\nError al agregar la nota en la orden. Intente nuevamente.")
+            else:
+                print("\nError: La nota no puede ser procesada. Intente nuevamente.")
         else:
             print("\nNo se encontró la orden con el ID proporcionado.")
 
@@ -285,12 +366,16 @@ class InterfazSimple:
         for orden in ordenes:
             print(f"\nORDEN #{orden.id} -- Estado: {orden.estado}")
             print(
-                f""""Equipo: {orden.dispositivo.marca} {orden.dispositivo.modelo} |
-                Falla: {orden.falla} | IMEI: {orden.dispositivo.imei}""")
-            print(f"""Cliente: {orden.dispositivo.cliente.nombre}
-                  {orden.dispositivo.cliente.apellido} |
-                  DNI: {orden.dispositivo.cliente.documento} |
-                  Telefono: {orden.dispositivo.cliente.telefono}""")
+                f"Equipo: {orden.dispositivo.marca} {orden.dispositivo.modelo}")
+            print(f"IMEI: {orden.dispositivo.imei}")
+            print(f"Falla: {orden.falla}")
+            print("-" * 50)
             print(
-                f"Notas Tecnicas:\n{orden.notas if orden.notas else 'No hay notas agregadas.'}")
-            print("="*40)
+                f"Cliente: {orden.dispositivo.cliente.nombre} {orden.dispositivo.cliente.apellido}")
+            print(
+                f"DNI: {orden.dispositivo.cliente.documento} | Tel: {orden.dispositivo.cliente.telefono}")
+            print("-" * 50)
+
+            notas_formateadas = orden.notas if orden.notas else "No hay notas agregadas."
+            print(f" Notas Técnicas:\n{notas_formateadas}")
+            print("="*50)

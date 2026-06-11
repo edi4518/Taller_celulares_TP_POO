@@ -4,8 +4,8 @@ from presentacion.menu import InterfazSimple
 
 
 def iniciar_aplicacion():
-    """Funcion para iniciar la aplicacion, 
-    que crea una instancia del repositorio y del menu, 
+    """Funcion para iniciar la aplicacion,
+    que crea una instancia del repositorio y del menu,
     y luego muestra el menu al usuario"""
     base_de_datos = RepositorioDatos()
     interfaz = InterfazSimple(base_de_datos)

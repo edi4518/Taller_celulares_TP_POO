@@ -11,11 +11,37 @@ class Tecnico (Persona):
         las reparaciones asignadas al tecnico"""
 
         super().__init__(nombre, apellido, documento, telefono)
-        self.id_tecnico = id_tecnico
-        self.turno = turno
+
+        try:
+            self.id_tecnico = id_tecnico
+            self.turno = turno
+        except ValueError as e:
+            print(f"Error al crear el técnico: {e}")
+
 
         # Lista para almacenar las reparaciones asignadas al técnico
         self._reparaciones_asignadas = []
+
+    @property
+    def id_tecnico(self):
+        """Metodo para obtener el id del tecnico"""
+        return self._id_tecnico
+
+    @id_tecnico.setter
+    def id_tecnico(self, valor):
+        """Metodo para establecer el id del tecnico, validando que sea un numero entero y positivo"""
+        if valor is None:
+            self._id_tecnico = None
+            return
+
+        try:
+            valor = int(valor)
+            if valor < 0:
+                raise ValueError("El ID del técnico debe ser un número entero positivo.")
+            self._id_tecnico = valor
+        except (ValueError, TypeError) as e:
+            raise ValueError("El ID del técnico debe ser un número entero positivo.") from e
+
 
     @property
     def turno(self):
@@ -26,11 +52,17 @@ class Tecnico (Persona):
     def turno(self, valor):
         """Metodo para establecer el turno del tecnico, validando que sea un turno valido"""
         turnos_validos = ['MAÑANA', 'TARDE', 'NOCHE']
-        if valor.upper() in turnos_validos:
-            self._turno = valor.upper()
-        else:
-            raise ValueError(
-                f"Turno inválido. Los turnos válidos son: {', '.join(turnos_validos)}.")
+
+        try:
+            valor_upper = str(valor).strip().upper()
+
+            if valor_upper not in turnos_validos:
+                raise ValueError
+            self._turno = valor_upper
+
+        except (ValueError, TypeError, AttributeError) as exc:
+            raise ValueError(f"""Turno inválido.
+                             Los turnos válidos son: {', '.join(turnos_validos)}.""") from exc
 
     def agregar_reparacion(self, reparacion):
         """Metodo para agregar una reparacion a la lista de reparaciones asignadas al tecnico"""
