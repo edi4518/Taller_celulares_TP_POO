@@ -235,6 +235,7 @@ class InterfazSimple:
             nueva_orden.id = id_orden_creada
             tecnico_asignado.agregar_reparacion(nueva_orden)
             print(f"\n Orden #{nueva_orden.id} creada exitosamente!")
+            return
         else:
             print("\n Error al crear la orden de reparacion. Intente nuevamente.")
 
@@ -247,7 +248,7 @@ class InterfazSimple:
 
         print("\n--- ORDENES EN EL TALLER ---")
         # Listamos las ordenes existentes en la BD
-        for i, orden in enumerate(ordenes):
+        for orden in ordenes:
             print(
                 f""" Orden N°: {orden.id} |
                 Dispositivo: {orden.dispositivo.modelo} |
